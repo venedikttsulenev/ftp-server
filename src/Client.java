@@ -8,10 +8,10 @@ public class Client {
     public static void main(String[] args) {
         String hostname = DEFAULT_HOSTNAME;
         int port = Server.DEFAULT_PORT;
+        if (args.length > 0)
+            hostname = args[0];
         if (args.length > 1)
-            hostname = args[1];
-        if (args.length > 2)
-            port = Integer.parseInt(args[2]);
+            port = Integer.parseInt(args[1]);
         try {
             Socket socket = new Socket(hostname, port);
             DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());

@@ -8,8 +8,8 @@ public class Server {
     static final String MESSAGE_STOP = "stop";
     public static void main(String[] args) {
         int port = DEFAULT_PORT;
-        if (args.length > 1)
-            port = Integer.parseInt(args[1]);
+        if (args.length > 0)
+            port = Integer.parseInt(args[0]);
         try {
             ServerSocket serverSocket = new ServerSocket(port);
             Socket socket = serverSocket.accept();
