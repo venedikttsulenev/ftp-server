@@ -13,13 +13,15 @@ public class Server {
                 port = Args.parsePort(args[0]);
             else
                 System.out.println(Args.argNotSpecifiedMessage("Port", String.valueOf(port)));
-            ServerSocket serverSocket = new ServerSocket(port);
-            Socket socket = serverSocket.accept();
-            DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
-            String message = null;
-            while (!MESSAGE_STOP.equals(message)) {
-                message = dataInputStream.readUTF();
-                System.out.println("Message: " + message);
+            try (ServerSocket serverSocket = new ServerSocket(port);
+                 Socket socket = serverSocket.accept();
+                 DataInputStream dataInputStream = new DataInputStream(socket.getInputStream()))
+            {
+                String message = null;
+                while (!MESSAGE_STOP.equals(message)) {
+                    message = dataInputStream.readUTF();
+                    System.out.println("Message: " + message);
+                }
             }
         }
         catch (Exception e) {
