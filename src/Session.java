@@ -10,7 +10,6 @@ public class Session implements Runnable {
         this.sessionNumber = sessionNumber;
     }
     public void run() {
-        Server.increaseSessions();
         System.out.println("Client #" + sessionNumber + " connected" + " [" + Server.getSessions() + ']');
         try (DataInputStream dataInputStream = new DataInputStream(socket.getInputStream())) {
             String message = dataInputStream.readUTF();
@@ -22,7 +21,7 @@ public class Session implements Runnable {
         catch (IOException e) {
             System.out.println("Session #" + sessionNumber + " error: " + e.getMessage());
         }
-        Server.decreaseSessions();
+        Server.decreaseSessions(); /* Сообщаем серверу, что сессия завершена */
         System.out.println("Client #" + sessionNumber + " disconnected" + " [" + Server.getSessions() + ']');
     }
 }

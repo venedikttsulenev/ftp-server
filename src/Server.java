@@ -19,11 +19,16 @@ public class Server {
                 System.out.println("Server started at localhost:" + port + ". Max sessions: " + maxSessions);
                 int sessionID = -1;
                 while (true) {
-                    if (getSessions() < maxSessions) {
+                    while (getSessions() < maxSessions) {
                         Socket socket = serverSocket.accept();
-                        new Thread(new Session(socket, ++sessionID)).start();
+                        increaseSessions();
+                        try {
+                            new Thread(new Session(socket, ++sessionID)).start();
+                        } catch (Throwable e) {
+                            decreaseSessions(); /* Поток не стартовал */
+                        }
                     }
-                    Thread.sleep(500);
+                    Thread.sleep(500); /* Снижаем нагрузку на ЦП при достижении maxSessions */
                 }
             }
         }
