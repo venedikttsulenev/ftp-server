@@ -1,27 +1,28 @@
 import java.io.DataInputStream;
-import java.io.IOException;
 import java.net.Socket;
 
 public class Session implements Runnable {
+    private Server server;
     private Socket socket;
-    private int sessionNumber;
-    public Session(Socket socket, int sessionNumber) {
+    private int id;
+    public Session(Server server, Socket socket, int id) {
+        this.server = server;
         this.socket = socket;
-        this.sessionNumber = sessionNumber;
+        this.id = id;
     }
     public void run() {
-        System.out.println("Client #" + sessionNumber + " connected" + " [" + Server.getSessions() + ']');
         try (DataInputStream dataInputStream = new DataInputStream(socket.getInputStream())) {
             String message = dataInputStream.readUTF();
-            while (!Server.MESSAGE_STOP.equals(message)) {
-                System.out.println("Client #" + sessionNumber + ": " + message);
+            while (!Client.DISCONNECT_MESSAGE.equals(message)) {
+                System.out.println("Client #" + id + ": " + message);
                 message = dataInputStream.readUTF();
             }
         }
-        catch (IOException e) {
-            System.out.println("Session #" + sessionNumber + " error: " + e.getMessage());
+        catch (Exception e) {
+            System.out.println("Session #" + id + " error: " + e.getMessage());
         }
-        Server.decreaseSessions(); /* Сообщаем серверу, что сессия завершена */
-        System.out.println("Client #" + sessionNumber + " disconnected" + " [" + Server.getSessions() + ']');
+        finally {
+            server.sessionFinished(this.id);
+        }
     }
 }
