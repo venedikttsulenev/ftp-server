@@ -10,6 +10,9 @@ public class Session implements Runnable {
         this.socket = socket;
         this.id = id;
     }
+    public int getId() {
+        return id;
+    }
     public void run() {
         try (DataInputStream dataInputStream = new DataInputStream(socket.getInputStream())) {
             String message = dataInputStream.readUTF();
