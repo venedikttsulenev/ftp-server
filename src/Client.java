@@ -37,11 +37,11 @@ public class Client {
                 boolean quit = false;
                 while (!quit) {
                     input = console.readLine();
-                    if ("quit".equals(input)) {
+                    if ("quit".equals(input)) {         /* 'quit' command */
                         quit = true;
                         dataOutputStream.writeUTF(DISCONNECT_MESSAGE);
                     }
-                    else if (input.charAt(0) == ':')
+                    else if (input.charAt(0) == ':')    /* message starts with ':' */
                         dataOutputStream.writeUTF(input.substring(1));
                     else
                         System.out.println("What?");

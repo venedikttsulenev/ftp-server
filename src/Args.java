@@ -1,9 +1,7 @@
 public class Args {
+    /* TODO: getopt() */
     public static int parsePort(String args[], int index, int defaultValue) throws IllegalArgumentException {
-        int port = Args.parseInt(args, index, "Port", defaultValue);
-        if (port < 1 || port > 65535)
-            throw new IllegalArgumentException("Port number out of range");
-        return port;
+        return Args.parseInt(args, index, "Port", defaultValue);
     }
     public static int parseInt(String args[], int index, String name, int defaultValue) throws IllegalArgumentException {
         int i = defaultValue;

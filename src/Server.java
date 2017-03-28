@@ -5,53 +5,52 @@ import java.net.Socket;
 public class Server implements Runnable {
     public static final String SERVER_BUSY_MESSAGE = "s_busy";
     public static final String SERVER_CONNECTED_MESSAGE = "s_conn";
-    private static final int DEFAULT_CHANNEL_SIZE = 512;
-    private final Object lock = new Object();
+    private static final int DEFAULT_SESSION_CHANNEL_SIZE = 512;
+    private final Object sessionsCounterLock = new Object();
     private final int maxSessions;
     private final int port;
+    private final int id;
     private int sessions = 0;
-    public Server(int port, int maxSessions) {
+    public Server(int port, int maxSessions, int id) {
         this.port = port;
         this.maxSessions = maxSessions;
+        this.id = id;
     }
-    public void sessionFailed(int sessionID) {
-        System.out.println("Failed to start session #" + sessionID);
-        sessionFinished(sessionID);
+    public void sessionStarted(int sessionID) {
+        synchronized (sessionsCounterLock) {
+            ++sessions;
+            System.out.println("Server #" + this.id + ": Client #" + sessionID + " connected [" + sessions + ']');
+        }
+    }
+    public void sessionMessage(int sessionID, String message) {
+        System.out.println("Server #" + this.id + ": Client #" + sessionID + ": " + message);
     }
     public void sessionFinished(int sessionID) {
-        synchronized (lock) {
-            if (sessions == maxSessions)
-                lock.notifyAll();
+        synchronized (sessionsCounterLock) {
             --sessions;
-            System.out.println("Client #" + sessionID + " disconnected [sessions running: " + sessions + ']');
+            System.out.println("Server #" + this.id + ": Client #" + sessionID + " disconnected [" + sessions + ']');
         }
     }
     public void run() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            Channel channel = new Channel(DEFAULT_CHANNEL_SIZE);
-            Dispatcher dispatcher = new Dispatcher(channel, this);
+            ThreadPool threadPool = new ThreadPool(maxSessions);
+            Channel<Session> channel = new Channel<>(DEFAULT_SESSION_CHANNEL_SIZE);
+            Dispatcher dispatcher = new Dispatcher(channel, threadPool);
             new Thread(dispatcher).start();
-            System.out.println("Server started at localhost:" + port + ". Max sessions: " + maxSessions);
+            System.out.println("Server #" + this.id + " started at localhost:" + port + ". Max sessions: " + maxSessions);
             int sessionID = -1;
             while (true) {
-                Socket socket = serverSocket.accept();
-                DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
-                synchronized (lock) {
-                    if (sessions == maxSessions) {
-                        dataOutputStream.writeUTF(SERVER_BUSY_MESSAGE);
-                        do {
-                            try {
-                                lock.wait();
-                            } catch (InterruptedException e) {
-                                System.out.println(e.getMessage());
-                            }
-                        } while (sessions == maxSessions);
+                try {
+                    Socket socket = serverSocket.accept();
+                    synchronized (sessionsCounterLock) {
+                        if (sessions == maxSessions)
+                            new DataOutputStream(socket.getOutputStream()).writeUTF(SERVER_BUSY_MESSAGE);
                     }
-                    ++sessions;
                     Session session = new Session(this, socket, ++sessionID);
-                    channel.put(session);
-                    dataOutputStream.writeUTF(SERVER_CONNECTED_MESSAGE);
-                    System.out.println("Client #" + sessionID + " connected [sessions running: " + sessions + ']');
+                    threadPool.execute(session);
+                }
+                catch (Exception e) {
+                    System.out.println(e.getMessage());
                 }
             }
         } catch (Exception e) {

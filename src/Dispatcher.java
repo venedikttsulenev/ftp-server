@@ -1,19 +1,12 @@
 public class Dispatcher implements Runnable {
-    private final Channel channel;
-    private final Server server;
-    public Dispatcher(Channel channel, Server server) {
+    private final Channel<Session> channel;
+    private final ThreadPool threadPool;
+    public Dispatcher(Channel<Session> channel, ThreadPool threadPool) {
         this.channel = channel;
-        this.server = server;
+        this.threadPool = threadPool;
     }
     public void run() {
-        while (true) {
-            Session session = (Session)channel.take();
-            try {
-                new Thread(session).start();
-            } catch (SecurityException | IllegalThreadStateException e) {
-                System.out.println(e.getMessage());
-                server.sessionFailed(session.getId()); /* Failed to start thread */
-            }
-        }
+        while (true)
+            threadPool.execute(channel.take());
     }
 }

@@ -1,4 +1,5 @@
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.net.Socket;
 
 public class Session implements Runnable {
@@ -10,19 +11,19 @@ public class Session implements Runnable {
         this.socket = socket;
         this.id = id;
     }
-    public int getId() {
-        return id;
-    }
     public void run() {
-        try (DataInputStream dataInputStream = new DataInputStream(socket.getInputStream())) {
+        try (DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
+             DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream())) {
+            dataOutputStream.writeUTF(Server.SERVER_CONNECTED_MESSAGE);
+            server.sessionStarted(this.id);
             String message = dataInputStream.readUTF();
             while (!Client.DISCONNECT_MESSAGE.equals(message)) {
-                System.out.println("Client #" + id + ": " + message);
+                server.sessionMessage(this.id, message);
                 message = dataInputStream.readUTF();
             }
         }
         catch (Exception e) {
-            System.out.println("Session #" + id + " error: " + e.getMessage());
+            server.sessionMessage(id, " error: " + e.getMessage());
         }
         finally {
             server.sessionFinished(this.id);
