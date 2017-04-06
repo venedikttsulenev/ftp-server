@@ -1,32 +1,39 @@
+package netUtils;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
 
 public class Session implements Runnable {
-    private Server server;
+    private Host host;
     private Socket socket;
     private int id;
-    public Session(Server server, Socket socket, int id) {
-        this.server = server;
+    public Session(Host host, Socket socket, int id) {
+        this.host = host;
         this.socket = socket;
         this.id = id;
     }
+    public int getId() {
+        return id;
+    }
+    @Override
     public void run() {
         try (DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
              DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream())) {
-            dataOutputStream.writeUTF(Server.SERVER_CONNECTED_MESSAGE);
-            server.sessionStarted(this.id);
+            dataOutputStream.writeUTF(Message.CONNECTED.toString());
+            host.sessionStarted(this);
             String message = dataInputStream.readUTF();
-            while (!Client.DISCONNECT_MESSAGE.equals(message)) {
-                server.sessionMessage(this.id, message);
+            while (!Message.DISCONNECTED.toString().equals(message)) {
+                if (message.charAt(0) == ':')  /* If message starts with ':' then it's user's text message */
+                    host.sessionMessage(this, message.substring(1));
                 message = dataInputStream.readUTF();
             }
         }
         catch (Exception e) {
-            server.sessionMessage(id, " error: " + e.getMessage());
+            host.sessionMessage(this, "Error: " + e.getMessage());
         }
         finally {
-            server.sessionFinished(this.id);
+            host.sessionFinished(this);
         }
     }
 }

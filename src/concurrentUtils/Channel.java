@@ -1,3 +1,5 @@
+package concurrentUtils;
+
 import java.util.LinkedList;
 
 public class Channel<T> {
@@ -7,7 +9,7 @@ public class Channel<T> {
     public Channel(int maxSize) {
         this.maxSize = maxSize;
     }
-    void put(T x) {
+    public void put(T x) {
         synchronized (lock) {
             while (queue.size() == maxSize)
                 try { lock.wait(); }
@@ -16,7 +18,7 @@ public class Channel<T> {
             lock.notifyAll();
         }
     }
-    T take() {
+    public T take() {
         synchronized (lock) {
             while (queue.isEmpty())
                 try { lock.wait(); }
@@ -25,9 +27,14 @@ public class Channel<T> {
             return queue.removeFirst();
         }
     }
-    boolean isEmpty() {
+    public boolean isEmpty() {
         synchronized (lock) {
             return queue.isEmpty();
+        }
+    }
+    public int size() {
+        synchronized (lock) {
+            return queue.size();
         }
     }
 }

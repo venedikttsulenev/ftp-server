@@ -1,3 +1,5 @@
+package concurrentUtils;
+
 public class WorkerThread implements Runnable {
     private final ThreadPool threadPool;
     private Runnable currentTask = null;
@@ -16,7 +18,7 @@ public class WorkerThread implements Runnable {
                         } catch (InterruptedException e) {}
                     currentTask.run();
                     currentTask = null;
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     System.out.println(e.getMessage());
                 } finally {
                     threadPool.onTaskCompleted(this);
@@ -24,8 +26,12 @@ public class WorkerThread implements Runnable {
             }
         }
     }
-    public void execute(Runnable task) {
+    public void execute(Runnable task) throws NullPointerException, IllegalStateException {
+        if (task == null)
+            throw new NullPointerException();
         synchronized (lock) {
+            if (currentTask != null)
+                throw new IllegalStateException("Cannot execute task: worker is busy");
             currentTask = task;
             lock.notifyAll();
         }

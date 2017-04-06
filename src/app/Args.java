@@ -1,3 +1,5 @@
+package app;
+
 public class Args {
     /* TODO: getopt() */
     public static int parsePort(String args[], int index, int defaultValue) throws IllegalArgumentException {
