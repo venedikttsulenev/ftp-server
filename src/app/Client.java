@@ -31,14 +31,10 @@ public class Client {
                  DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
                  DataInputStream dataInputStream = new DataInputStream(socket.getInputStream()))
             {
-                String serverSays;
-                Message message;
-                do {
+                String serverSays = dataInputStream.readUTF();
+                if (Message.SERVER_BUSY.equals(serverSays))
                     serverSays = dataInputStream.readUTF();
-                    message = Message.recognize(serverSays);
-                    System.out.println(humanReadable(message, serverSays));
-                } while (message == Message.SERVER_BUSY);
-                if (message == Message.CONNECTED) {
+                if (Message.CONNECTED.equals(serverSays)) {
                     System.out.println("Type ':message' to send message. Type 'quit' to quit.");
                     Console console = System.console();
                     String input;
@@ -47,14 +43,14 @@ public class Client {
                         input = console.readLine();
                         if ("quit".equals(input))
                             quit = true;
-                        else if (input.charAt(0) == ':')  /* message starts with ':' */
+                        else if (input.charAt(0) == ':')  /* User text message starts with ':' */
                             dataOutputStream.writeUTF(input);
                         else
                             System.out.println("What?");
                     }
-                    /* TODO: put this writeUTF in finally {...} */
-                    dataOutputStream.writeUTF(Message.DISCONNECTED.toString());
                 }
+                /* TODO: put this writeUTF in finally {...} */
+                dataOutputStream.writeUTF(Message.DISCONNECTED.toString());
             }
             catch (UnknownHostException e) {
                 System.out.println("Unknown host \"" + e.getMessage() + '\"');
