@@ -8,10 +8,12 @@ public class Session implements Runnable {
     private Host host;
     private Socket socket;
     private int id;
-    public Session(Host host, Socket socket, int id) {
+    private final MessageHandler messageHandler;
+    public Session(Host host, Socket socket, int id, MessageHandler messageHandler) {
         this.host = host;
         this.socket = socket;
         this.id = id;
+        this.messageHandler = messageHandler;
     }
     public int getId() {
         return id;
@@ -25,12 +27,12 @@ public class Session implements Runnable {
             String message = dataInputStream.readUTF();
             while (!Message.DISCONNECTED.toString().equals(message)) {
                 if (message.charAt(0) == ':')  /* If message starts with ':' then it's user's text message */
-                    host.sessionMessage(this, message.substring(1));
+                    messageHandler.handle(host, this, message.substring(1));
                 message = dataInputStream.readUTF();
             }
         }
         catch (Exception e) {
-            host.sessionMessage(this, "Error: " + e.getMessage());
+            messageHandler.handle(host, this, "Error: " + e.getMessage());
         }
         finally {
             host.sessionFinished(this);

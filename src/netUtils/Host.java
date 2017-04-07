@@ -11,20 +11,19 @@ public class Host implements Runnable {
     private final String addrString;
     private final Channel<Runnable> sessionChannel;
     private final Server server;
-    public Host(Server server, int port, Channel<Runnable> channel) {
+    private final MessageHandlerFactory messageHandlerFactory;
+    public Host(Server server, int port, Channel<Runnable> channel, MessageHandlerFactory messageHandlerFactory) {
         this.server = server;
         this.port = port;
         this.addrString = "localhost:" + port;
         this.sessionChannel = channel;
+        this.messageHandlerFactory = messageHandlerFactory;
     }
     public String getAddress() {
         return addrString;
     }
     public void sessionStarted(Session session) {
         server.onSessionStarted(this, session);
-    }
-    public void sessionMessage(Session session, String message) {
-        server.onMessageReceived(this, session, message);
     }
     public void sessionFinished(Session session) {
         server.onSessionFinished(this, session);
@@ -37,7 +36,7 @@ public class Host implements Runnable {
             while (true) {
                 try {
                     Socket socket = serverSocket.accept();
-                    Session session = new Session(this, socket, ++sessionID);
+                    Session session = new Session(this, socket, ++sessionID, messageHandlerFactory.createMessageHandler());
                     if (server.sessionsRunning() == server.maxSessions())
                         new DataOutputStream(socket.getOutputStream()).writeUTF(Message.SERVER_BUSY.toString());
                     sessionChannel.put(session);

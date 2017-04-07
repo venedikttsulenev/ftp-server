@@ -1,5 +1,5 @@
 package netUtils;
 
 public interface MessageHandler {
-    String handle(String message);
+    String handle(Host host, Session session, String message);
 }

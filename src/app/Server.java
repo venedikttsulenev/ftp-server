@@ -4,7 +4,6 @@ import concurrentUtils.Channel;
 import concurrentUtils.Dispatcher;
 import concurrentUtils.ThreadPool;
 import netUtils.Host;
-import netUtils.MessageHandler;
 import netUtils.MessageHandlerFactory;
 import netUtils.Session;
 
@@ -12,38 +11,30 @@ public class Server implements netUtils.Server, Runnable {
     public static final int DEFAULT_PORT = 40001;
     private static final int DEFAULT_SESSIONS_LIMIT = 1024;
     private static final int DEFAULT_CHANNEL_SIZE = 512;
-    private final MessageHandler messageHandler;
+    private final MessageHandlerFactory messageHandlerFactory;
     private final ThreadPool threadPool;
     private final Channel<Runnable> sessionChannel;
     private final int port;
     private final int maxSessions;
-    public Server(int port, int maxSessions, MessageHandler messageHandler) {
+    public Server(int port, int maxSessions, int channelSize, MessageHandlerFactory messageHandlerFactory) {
         this.port = port;
         this.maxSessions = maxSessions;
         this.threadPool = new ThreadPool(maxSessions);
-        this.sessionChannel = new Channel<>(DEFAULT_CHANNEL_SIZE);
+        this.sessionChannel = new Channel<>(channelSize);
         new Dispatcher(sessionChannel, threadPool); /* Starts new thread implicitly */
-        this.messageHandler = messageHandler;
+        this.messageHandlerFactory = messageHandlerFactory;
     }
     @Override
     public void onSessionStarted(Host host, Session session) {
-        messageHandler.handle(
+        System.out.println(
                 host.getAddress()
                 + ": Client#" + session.getId()
                 + " connected [total: " + threadPool.getSessionsCount() + ']'
         );
     }
     @Override
-    public void onMessageReceived(Host host, Session session, String message) {
-        messageHandler.handle(
-                host.getAddress()
-                + ": Client#" + session.getId()
-                + ": " + message
-        );
-    }
-    @Override
     public void onSessionFinished(Host host, Session session) {
-        messageHandler.handle(
+        System.out.println(
                 host.getAddress()
                 + ": Client#" + session.getId()
                 + " disconnected [total: " + (threadPool.getSessionsCount() - 1) + ']'
@@ -59,19 +50,20 @@ public class Server implements netUtils.Server, Runnable {
     }
     @Override
     public void run() {
-        Host host = new Host(this, port, sessionChannel);
+        Host host = new Host(this, port, sessionChannel, messageHandlerFactory);
         host.run();
     }
     public static void main(String[] args) {
-        /* Usage: java app.Server <port> <maxSessions> */
+        /* Usage: java app.Server <port> <channelSize> <maxSessions> */
         int port = Args.parsePort(args, 0, DEFAULT_PORT);
-        int maxSessions = Args.parseInt(args, 1, "Max amount of sessions", DEFAULT_SESSIONS_LIMIT);
+        int channelSize = Args.parseInt(args, 1, "Channel size", DEFAULT_CHANNEL_SIZE);
+        int maxSessions = Args.parseInt(args, 2, "Max amount of sessions", DEFAULT_SESSIONS_LIMIT);
 
         try {
             Class classFactory = Class.forName("app.PrintMessageHandlerFactory");
             MessageHandlerFactory mHF = (MessageHandlerFactory)classFactory.newInstance();
 
-            Server server = new Server(port, maxSessions, mHF.createMessageHandler());
+            Server server = new Server(port, maxSessions, channelSize, mHF);
             server.run();
         } catch (Exception e) {
             e.printStackTrace();
