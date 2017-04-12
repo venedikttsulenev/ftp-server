@@ -1,18 +1,20 @@
 package netUtils;
 
 import concurrentUtils.Channel;
+import concurrentUtils.Stoppable;
 
 import java.io.DataOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class Host implements Runnable {
+public class Host implements Stoppable {
     private final int port;
     private final String addrString;
-    private final Channel<Runnable> sessionChannel;
+    private final Channel<Stoppable> sessionChannel;
     private final Server server;
     private final MessageHandlerFactory messageHandlerFactory;
-    public Host(Server server, int port, Channel<Runnable> channel, MessageHandlerFactory messageHandlerFactory) {
+    private volatile boolean isAlive;
+    public Host(Server server, int port, Channel<Stoppable> channel, MessageHandlerFactory messageHandlerFactory) {
         this.server = server;
         this.port = port;
         this.addrString = "localhost:" + port;
@@ -30,10 +32,11 @@ public class Host implements Runnable {
     }
     @Override
     public void run() {
+        isAlive = true;
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Server started at " + addrString);
             int sessionID = -1;
-            while (true) {
+            while (isAlive) {
                 try {
                     Socket socket = serverSocket.accept();
                     Session session = new Session(this, socket, ++sessionID, messageHandlerFactory.createMessageHandler());
@@ -48,5 +51,12 @@ public class Host implements Runnable {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+    }
+    @Override
+    public void stop() {
+        if (isAlive)
+            isAlive = false;
+        /* serverSocket will be closed automatically
+        * as soon as end of try-with-resources block in run() is reached */
     }
 }

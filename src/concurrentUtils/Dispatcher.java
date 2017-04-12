@@ -1,15 +1,23 @@
 package concurrentUtils;
 
-public class Dispatcher implements Runnable {
-    private final Channel<Runnable> channel;
+public class Dispatcher implements Stoppable {
+    private final Channel<Stoppable> channel;
     private final ThreadPool threadPool;
-    public Dispatcher(Channel<Runnable> channel, ThreadPool threadPool) {
+    private volatile boolean isAlive;
+    public Dispatcher(Channel<Stoppable> channel, ThreadPool threadPool) {
         this.channel = channel;
         this.threadPool = threadPool;
-        new Thread(this).start();
+        new Thread(this)
+                .start();
     }
+    @Override
     public void run() {
-        while (true)
+        isAlive = true;
+        while (isAlive)
             threadPool.execute(channel.take());
+    }
+    @Override
+    public void stop() {
+        isAlive = false; /* Check if isAlive equals false already and throw exception??? */
     }
 }

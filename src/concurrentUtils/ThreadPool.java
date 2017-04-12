@@ -15,7 +15,7 @@ public class ThreadPool {
         allWorkers.add(workerThread);
         freeWorkers.put(workerThread);
     }
-    public void execute(Runnable task) {
+    public void execute(Stoppable task) {
         if (freeWorkers.isEmpty()) {
             synchronized (lock) {
                 if (allWorkers.size() < maxSize) {
@@ -34,5 +34,10 @@ public class ThreadPool {
     }
     public void onTaskCompleted(WorkerThread workerThread) {
         freeWorkers.put(workerThread);
+    }
+    public void stop() {
+        for (WorkerThread wt : allWorkers) {
+            wt.stop();
+        }
     }
 }

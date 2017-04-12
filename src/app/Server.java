@@ -2,27 +2,26 @@ package app;
 
 import concurrentUtils.Channel;
 import concurrentUtils.Dispatcher;
+import concurrentUtils.Stoppable;
 import concurrentUtils.ThreadPool;
 import netUtils.Host;
 import netUtils.MessageHandlerFactory;
 import netUtils.Session;
 
-public class Server implements netUtils.Server, Runnable {
+public class Server implements netUtils.Server, Stoppable {
     public static final int DEFAULT_PORT = 40001;
     private static final int DEFAULT_SESSIONS_LIMIT = 1024;
     private static final int DEFAULT_CHANNEL_SIZE = 512;
-    private final MessageHandlerFactory messageHandlerFactory;
     private final ThreadPool threadPool;
-    private final Channel<Runnable> sessionChannel;
-    private final int port;
     private final int maxSessions;
+    private final Host host;
+    private final Dispatcher dispatcher;
     public Server(int port, int maxSessions, int channelSize, MessageHandlerFactory messageHandlerFactory) {
-        this.port = port;
         this.maxSessions = maxSessions;
         this.threadPool = new ThreadPool(maxSessions);
-        this.sessionChannel = new Channel<>(channelSize);
-        new Dispatcher(sessionChannel, threadPool); /* Starts new thread implicitly */
-        this.messageHandlerFactory = messageHandlerFactory;
+        Channel<Stoppable> sessionChannel = new Channel<>(channelSize);
+        this.dispatcher = new Dispatcher(sessionChannel, threadPool); /* Starts new thread implicitly */
+        this.host = new Host(this, port, sessionChannel, messageHandlerFactory);
     }
     @Override
     public void onSessionStarted(Host host, Session session) {
@@ -50,8 +49,14 @@ public class Server implements netUtils.Server, Runnable {
     }
     @Override
     public void run() {
-        Host host = new Host(this, port, sessionChannel, messageHandlerFactory);
         host.run();
+    }
+    @Override
+    public void stop() {
+        System.out.println("Shutting down...");
+        host.stop();
+        dispatcher.stop();
+        threadPool.stop();
     }
     public static void main(String[] args) {
         /* Usage: java app.Server <port> <channelSize> <maxSessions> */
@@ -64,12 +69,13 @@ public class Server implements netUtils.Server, Runnable {
             MessageHandlerFactory mHF = (MessageHandlerFactory)classFactory.newInstance();
 
             Server server = new Server(port, maxSessions, channelSize, mHF);
+            Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
             server.run();
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        /* TODO: run host in a separate thread and implement command line interface for server management
-        *  e.g: shutdown <host address>*/
+        /* TODO: run multiple hosts in separate threads and implement command line interface for server management
+        *  e.g: shutdown <host address> */
     }
 }

@@ -5,10 +5,9 @@ import netUtils.MessageHandler;
 import netUtils.Session;
 
 public class PrintMessageHandler implements MessageHandler {
-    public String handle(Host host, Session session, String message) throws NullPointerException {
+    public void handle(Host host, Session session, String message) throws NullPointerException {
         if (null == host || null == session || null == message)
             throw new NullPointerException();
         System.out.println(host.getAddress() + ": #" + session.getId() + " says: " + message);
-        return message;
     }
 }

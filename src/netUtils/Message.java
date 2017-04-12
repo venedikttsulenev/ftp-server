@@ -1,7 +1,6 @@
 package netUtils;
 
 public enum Message {
-    UNKNOWN     (null),
     CONNECTED   ("conn"),
     DISCONNECTED("disc"),
     SERVER_BUSY ("busy");

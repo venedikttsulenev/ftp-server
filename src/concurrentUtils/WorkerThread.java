@@ -1,32 +1,47 @@
 package concurrentUtils;
 
-public class WorkerThread implements Runnable {
+public class WorkerThread implements Stoppable {
     private final ThreadPool threadPool;
-    private Runnable currentTask = null;
+    private final Thread thread;
     private final Object lock = new Object();
+    private Stoppable currentTask = null;
+    private volatile boolean isAlive = true;
     public WorkerThread(ThreadPool threadPool) {
         this.threadPool = threadPool;
-        new Thread(this).start();
+        (this.thread = new Thread(this)).start();
     }
+    @Override
     public void run() {
         synchronized (lock) {
-            while (true) {
+            while (isAlive) {
                 try {
                     while (currentTask == null)
                         try {
                             lock.wait();
-                        } catch (InterruptedException e) {}
+                        } catch (InterruptedException e) {
+                            if (!isAlive)
+                                return;
+                        }
                     currentTask.run();
-                    currentTask = null;
                 } catch (RuntimeException e) {
-                    System.out.println(e.getMessage());
+                    e.printStackTrace();
                 } finally {
+                    currentTask = null;
                     threadPool.onTaskCompleted(this);
                 }
             }
         }
     }
-    public void execute(Runnable task) throws NullPointerException, IllegalStateException {
+    @Override
+    public void stop() {
+        if (isAlive) {
+            isAlive = false;
+            if (null != currentTask) /* No need to synchronize because dispatcher stopped already */
+                currentTask.stop();
+            thread.interrupt();
+        }
+    }
+    public void execute(Stoppable task) throws NullPointerException, IllegalStateException {
         if (task == null)
             throw new NullPointerException();
         synchronized (lock) {
