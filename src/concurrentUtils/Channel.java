@@ -37,4 +37,7 @@ public class Channel<T> {
             return queue.size();
         }
     }
+    public LinkedList<T> getElements() {
+        return queue;
+    }
 }

@@ -19,5 +19,7 @@ public class Dispatcher implements Stoppable {
     @Override
     public void stop() {
         isAlive = false; /* Check if isAlive equals false already and throw exception??? */
+        for (Stoppable task : channel.getElements())
+            task.stop();
     }
 }

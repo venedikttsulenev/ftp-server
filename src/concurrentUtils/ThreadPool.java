@@ -36,8 +36,7 @@ public class ThreadPool {
         freeWorkers.put(workerThread);
     }
     public void stop() {
-        for (WorkerThread wt : allWorkers) {
+        for (WorkerThread wt : allWorkers)
             wt.stop();
-        }
     }
 }
