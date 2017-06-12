@@ -1,5 +1,6 @@
-package app;
+package server;
 
+import commons.Args;
 import concurrentUtils.Channel;
 import concurrentUtils.Dispatcher;
 import concurrentUtils.Stoppable;
@@ -8,20 +9,29 @@ import netUtils.Host;
 import netUtils.MessageHandlerFactory;
 import netUtils.Session;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.HashMap;
+
 public class Server implements netUtils.Server, Stoppable {
-    public static final int DEFAULT_PORT = 40001;
+    public static final int DEFAULT_CONTROL_PORT = 40001;
+    public static final int DEFAULT_DATA_PORT = 40002;
     private static final int DEFAULT_SESSIONS_LIMIT = 1024;
     private static final int DEFAULT_CHANNEL_SIZE = 512;
+    private static final String DEFAULT_DIRECTORY = "/Users/venedikttsulenev/Public/";
     private final ThreadPool threadPool;
     private final int maxSessions;
     private final Host host;
     private final Dispatcher dispatcher;
-    public Server(int port, int maxSessions, int channelSize, MessageHandlerFactory messageHandlerFactory) {
+    private final HashMap<Integer, Socket> controlSocketsWaiting;
+    public Server(File root, int dataPort, int maxSessions, int channelSize, MessageHandlerFactory messageHandlerFactory, int controlPort) throws IOException {
         this.maxSessions = maxSessions;
+        this.controlSocketsWaiting = new HashMap<>(maxSessions);
         this.threadPool = new ThreadPool(maxSessions);
         Channel<Stoppable> sessionChannel = new Channel<>(channelSize);
         this.dispatcher = new Dispatcher(sessionChannel, threadPool); /* Starts new thread implicitly */
-        this.host = new Host(this, port, sessionChannel, messageHandlerFactory);
+        this.host = new Host(root, controlSocketsWaiting, "localhost", controlPort, dataPort, sessionChannel, messageHandlerFactory, this);
     }
     @Override
     public void onSessionStarted(Host host, Session session) {
@@ -59,16 +69,21 @@ public class Server implements netUtils.Server, Stoppable {
         threadPool.stop();
     }
     public static void main(String[] args) {
-        /* Usage: java app.Server <port> <channelSize> <maxSessions> */
-        int port = Args.parsePort(args, 0, DEFAULT_PORT);
-        int channelSize = Args.parseInt(args, 1, "Channel size", DEFAULT_CHANNEL_SIZE);
-        int maxSessions = Args.parseInt(args, 2, "Max amount of sessions", DEFAULT_SESSIONS_LIMIT);
+
+        /* Usage: java server.Server <controlPort> <dataPort> <directory> <channelSize> <maxSessions> */
+        int controlPort = Args.parsePort(args, 0, DEFAULT_CONTROL_PORT);
+        int dataPort = Args.parsePort(args, 1, DEFAULT_DATA_PORT);
+        int channelSize = Args.parseInt(args, 2, "Channel size", DEFAULT_CHANNEL_SIZE);
+        int maxSessions = Args.parseInt(args, 3, "Max amount of sessions", DEFAULT_SESSIONS_LIMIT);
+        String directory = Args.parseString(args, 4, "Root directory", DEFAULT_DIRECTORY);
+
+        File root = new File(directory);
 
         try {
-            Class classFactory = Class.forName("app.PrintMessageHandlerFactory");
+            Class classFactory = Class.forName("server.PrintMessageHandlerFactory");
             MessageHandlerFactory mHF = (MessageHandlerFactory)classFactory.newInstance();
 
-            Server server = new Server(port, maxSessions, channelSize, mHF);
+            Server server = new Server(root, dataPort, maxSessions, channelSize, mHF, controlPort);
             Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
             server.run();
         } catch (Exception e) {

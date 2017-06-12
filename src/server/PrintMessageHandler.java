@@ -1,4 +1,4 @@
-package app;
+package server;
 
 import netUtils.Host;
 import netUtils.MessageHandler;
@@ -8,6 +8,6 @@ public class PrintMessageHandler implements MessageHandler {
     public void handle(Host host, Session session, String message) throws NullPointerException {
         if (null == host || null == session || null == message)
             throw new NullPointerException();
-        System.out.println(host.getAddress() + ": #" + session.getId() + " says: " + message);
+        System.out.println(host.getAddress() + ": Client#" + session.getId() + ": " + message);
     }
 }
